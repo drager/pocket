@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+		"pocket-cli",
+		"pocket-api",
+]

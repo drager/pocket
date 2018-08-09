@@ -1,0 +1,13 @@
+[package]
+authors = ["Jesper Håkansson <jesper@jesperh.se>"]
+name = "pocket-cli"
+version = "0.1.0"
+
+[dependencies]
+dotenv = "0.13.0"
+failure = "0.1.2"
+futures = "0.1.23"
+tokio = "0.1.7"
+hyper = "0.12.7"
+pocket-api = { path = "../pocket-api" }
+clap = "2.32.0"
