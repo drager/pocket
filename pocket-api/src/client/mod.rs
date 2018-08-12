@@ -1,5 +1,5 @@
 use failure::Error;
-use futures::future::{self, Future};
+use futures::future::Future;
 use httper;
 use serde_json;
 use std::collections::HashMap;
@@ -23,6 +23,15 @@ pub struct PocketItem {
 pub struct User {
     access_token: String,
     username: String,
+}
+
+impl User {
+    pub fn new(access_token: &str, username: &str) -> Self {
+        User {
+            access_token: access_token.to_string(),
+            username: username.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
