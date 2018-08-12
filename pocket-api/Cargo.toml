@@ -9,4 +9,4 @@ futures = "0.1.23"
 serde = "1.0.71"
 serde_json = "1.0.24"
 serde_derive = "1.0.71"
-httper = { path = "../../httper" }
+httper = "0.1.0"
