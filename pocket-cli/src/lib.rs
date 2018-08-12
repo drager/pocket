@@ -14,6 +14,7 @@ use std::net::SocketAddr;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use tokio::runtime::Runtime;
 
 pub mod config;
 pub mod server;
@@ -29,7 +30,10 @@ pub fn initialize(client: &PocketClient, server_port: u16) {
 
         let sign_in_future = sign_in_flow(client, &addr);
 
-        let handle = thread::spawn(|| tokio::run(server_handle.future));
+        let handle = thread::spawn(move || {
+            let mut rt = Runtime::new().unwrap();
+            rt.block_on(server_handle.future)
+        });
         let _handle_result = handle.join();
     }
 }
