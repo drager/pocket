@@ -9,6 +9,7 @@ extern crate tokio;
 
 use clap::{App, Arg};
 use dotenv::dotenv;
+use futures::Future;
 use pocket_api::client::PocketClient;
 use std::env;
 use std::process;
@@ -54,7 +55,15 @@ fn main() {
 
     let pocket_client = PocketClient::new(&api_key, &3);
 
-    pocket_cli::initialize(&pocket_client, server_port);
+    let user_future = pocket_cli::initialize(&pocket_client, server_port);
+
+    tokio::run(
+        user_future
+            .map(|user| {
+                println!("User: {:?}", user);
+            })
+            .map_err(|err| eprintln!("Error: {:?}", err)),
+    );
 }
 
 fn get_or_exit(env_var: &str) -> String {
