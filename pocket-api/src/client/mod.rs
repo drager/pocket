@@ -20,15 +20,30 @@ pub struct PocketItem {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct User {
+    access_token: String,
+    username: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Step1 {
+    pub code: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 enum DetailType {
     Complete,
     Simple,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 struct SignInParams {
     consumer_key: String,
-    redirect_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    redirect_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -67,15 +82,18 @@ impl PocketClient {
         }
     }
 
-    pub fn sign_in(&self) -> impl Future<Item = String, Error = Error> {
+    pub fn sign_in_step_1<'a>(
+        &self,
+        redirect_uri: String,
+    ) -> impl Future<Item = Step1, Error = Error> + 'a {
         let url = self.get_url("oauth/request", None);
-        let redirect_uri = "pocketapp1234:authorizationFinished";
 
         let headers = self.headers.clone();
 
         let payload = SignInParams {
             consumer_key: self.api_key.to_string(),
-            redirect_uri: redirect_uri.to_string(),
+            redirect_uri: Some(redirect_uri.to_string()),
+            ..SignInParams::default()
         };
 
         let payload = serde_json::to_string(&payload).unwrap();
@@ -88,13 +106,41 @@ impl PocketClient {
             .json::<Code>();
 
         code.map(move |code| {
-            format!(
+            let url = format!(
                 "{base_url}/auth/authorize?request_token={request_token}&redirect_uri={redirect_uri}",
                 base_url = BASE_URL,
-                request_token = code.code,
+                request_token = &code.code,
                 redirect_uri = redirect_uri
-            )
+            );
+
+            Step1 {
+                code: code.code,
+                url,
+            }
         })
+    }
+
+    pub fn sign_in_step_2(&self, code: String) -> impl Future<Item = User, Error = Error> {
+        let url = self.get_url("oauth/authorize", None);
+        let headers = self.headers.clone();
+
+        let payload = SignInParams {
+            consumer_key: self.api_key.to_string(),
+            code: Some(code),
+            ..SignInParams::default()
+        };
+
+        let payload = serde_json::to_string(&payload).unwrap();
+
+        println!("Payload {:?}", payload);
+        println!("Url {:?}", url);
+
+        self.http_client
+            .post(&url)
+            .payload(payload)
+            .headers(headers)
+            .send()
+            .json::<User>()
     }
 
     pub fn retrieve(&self) -> httper::client::response_future::ResponseFuture {
@@ -118,6 +164,10 @@ impl PocketClient {
             .payload(payload_as_json.unwrap())
             .send();
         data
+    }
+
+    pub fn is_signed_in(&self) -> bool {
+        self.code.is_some()
     }
 
     fn get_url(&self, path: &str, access_token: Option<&str>) -> String {
